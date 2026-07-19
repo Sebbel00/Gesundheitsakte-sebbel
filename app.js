@@ -502,6 +502,8 @@ document.getElementById("edit-entry-btn").addEventListener("click", () => {
   if (!currentDetailEntry) return;
   loadEntryIntoForm(currentDetailEntry);
   switchTab("entry");
+  switchSubtab("entry-schmerz");
+  document.getElementById("subpanel-entry-schmerz").scrollIntoView({ behavior: "smooth" });
 });
 
 document.getElementById("delete-entry-btn").addEventListener("click", async () => {
@@ -774,6 +776,8 @@ document.getElementById("befund-edit-btn").addEventListener("click", () => {
   document.getElementById("befund-kategorie").value = currentBefundDetail.kategorie || "Arztbrief";
   document.getElementById("befund-datum").value = currentBefundDetail.datum || "";
   document.getElementById("befund-inhalt").value = currentBefundDetail.inhalt || "";
+  switchTab("entry");
+  switchSubtab("entry-befunde");
   document.getElementById("befunde-upload-card").scrollIntoView({ behavior: "smooth" });
 });
 
@@ -892,6 +896,8 @@ function renderMedikationTimeline() {
       document.getElementById("med-zeitraum").value = m.zeitraum || "";
       document.getElementById("med-medikamente").value = m.medikamente || "";
       document.getElementById("med-notiz").value = m.notiz || "";
+      switchTab("entry");
+      switchSubtab("entry-medikation");
       document.getElementById("medikation-form-card").scrollIntoView({ behavior: "smooth" });
     });
   });
