@@ -53,60 +53,138 @@
       <button class="tab" data-tab="users" id="tab-users">Nutzerverwaltung</button>
     </nav>
 
-    <!-- ---------- TAB: Eintrag ---------- -->
+    <!-- ---------- TAB: Neuer Eintrag (mit Unterreitern) ---------- -->
     <section id="panel-entry" class="panel">
-      <div class="card">
-        <h2 id="entry-form-title">Neuer Eintrag</h2>
-        <p class="hint">Trag bitte alle 2 Stunden die Schmerzintensität (0 = kein Schmerz, 10 = stärkster vorstellbarer Schmerz) für jede Region ein.</p>
+      <nav class="subtabs no-print">
+        <button class="subtab active" data-subtab="entry-schmerz" id="subtab-entry-schmerz">Schmerztagebuch</button>
+        <button class="subtab" data-subtab="entry-befunde" id="subtab-entry-befunde">Befunde</button>
+        <button class="subtab" data-subtab="entry-medikation" id="subtab-entry-medikation">Medikation</button>
+      </nav>
 
-        <div class="field" style="max-width:220px;">
-          <label for="entry-date">Datum</label>
-          <input type="date" id="entry-date">
-        </div>
+      <!-- Unterreiter: Schmerztagebuch-Eintrag -->
+      <div id="subpanel-entry-schmerz" class="subpanel">
+        <div class="card">
+          <h2 id="entry-form-title">Neuer Eintrag</h2>
+          <p class="hint">Trag bitte alle 2 Stunden die Schmerzintensität (0 = kein Schmerz, 10 = stärkster vorstellbarer Schmerz) für jede Region ein.</p>
 
-        <div class="table-scroll">
-          <table class="pain-table" id="pain-table">
-            <!-- wird per JS befüllt -->
-          </table>
-        </div>
-
-        <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:18px;">
-          <div class="field" style="flex:1; min-width:220px;">
-            <label for="entry-medikamente">Medikamente (heute genommen / bei Bedarf)</label>
-            <textarea id="entry-medikamente" placeholder="z. B. Schmerzmedikation nach Plan, zusätzlich ..."></textarea>
+          <div class="field" style="max-width:220px;">
+            <label for="entry-date">Datum</label>
+            <input type="date" id="entry-date">
           </div>
-          <div class="field" style="min-width:220px;">
-            <label>Schlaf (letzte Nacht)</label>
-            <div class="radio-row">
-              <label><input type="radio" name="schlaf" value="ausreichend"> ausreichend</label>
-              <label><input type="radio" name="schlaf" value="nicht_ausreichend"> nicht ausreichend</label>
+
+          <div class="table-scroll">
+            <table class="pain-table" id="pain-table">
+              <!-- wird per JS befüllt -->
+            </table>
+          </div>
+
+          <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:18px;">
+            <div class="field" style="flex:1; min-width:220px;">
+              <label for="entry-medikamente">Medikamente (heute genommen / bei Bedarf)</label>
+              <textarea id="entry-medikamente" placeholder="z. B. Schmerzmedikation nach Plan, zusätzlich ..."></textarea>
+            </div>
+            <div class="field" style="min-width:220px;">
+              <label>Schlaf (letzte Nacht)</label>
+              <div class="radio-row">
+                <label><input type="radio" name="schlaf" value="ausreichend"> ausreichend</label>
+                <label><input type="radio" name="schlaf" value="nicht_ausreichend"> nicht ausreichend</label>
+              </div>
             </div>
           </div>
+
+          <div class="field">
+            <label>Sonstige Beschwerden (ganzer Tag)</label>
+            <div class="checklist" id="beschwerden-checklist"><!-- JS --></div>
+          </div>
+
+          <div class="field">
+            <label for="entry-andere">Andere Beschwerden</label>
+            <input type="text" id="entry-andere" placeholder="Freitext">
+          </div>
+
+          <div class="error-msg" id="entry-error"></div>
+
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn btn-primary" id="save-entry-btn">Eintrag speichern</button>
+            <button class="btn btn-ghost hidden" id="cancel-edit-btn">Bearbeitung abbrechen</button>
+          </div>
         </div>
+      </div>
 
-        <div class="field">
-          <label>Sonstige Beschwerden (ganzer Tag)</label>
-          <div class="checklist" id="beschwerden-checklist"><!-- JS --></div>
+      <!-- Unterreiter: Befund hinzufügen -->
+      <div id="subpanel-entry-befunde" class="subpanel hidden">
+        <div class="card" id="befunde-upload-card">
+          <h2 id="befund-form-title">Befund hinzufügen</h2>
+          <p class="hint">Arztbriefe, Bescheide, MRT-Befunde, Laborwerte etc. als Text/Markdown ablegen. Ärzt:innen mit Zugang können sie lesen, aber nicht verändern oder löschen. Originaldokumente (mit Stempel/Unterschrift) gibst du weiterhin separat als Kopie mit.</p>
+          <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
+            <div class="field" style="flex:1; min-width:200px;">
+              <label for="befund-titel">Titel</label>
+              <input type="text" id="befund-titel" placeholder="z. B. Arztbrief Schmerztherapie Friedberg">
+            </div>
+            <div class="field" style="min-width:180px;">
+              <label for="befund-kategorie">Kategorie</label>
+              <select id="befund-kategorie">
+                <option>Arztbrief</option>
+                <option>Bildgebung (MRT/Röntgen)</option>
+                <option>Laborwerte</option>
+                <option>Bescheid / Antrag</option>
+                <option>Rezept / Verordnung</option>
+                <option>Sonstiges</option>
+              </select>
+            </div>
+            <div class="field" style="min-width:160px;">
+              <label for="befund-datum">Datum</label>
+              <input type="date" id="befund-datum">
+            </div>
+          </div>
+          <div class="field">
+            <label for="befund-inhalt">Inhalt (Markdown, z. B. mit # Überschrift, **fett**, Tabellen)</label>
+            <textarea id="befund-inhalt" rows="10" placeholder="# Arztbrief ...&#10;**Diagnose:** ...&#10;&#10;| Wert | Ergebnis |&#10;|---|---|&#10;| ... | ... |"></textarea>
+          </div>
+          <div class="error-msg" id="befund-error"></div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" id="befund-upload-btn">Speichern</button>
+            <button class="btn btn-ghost hidden" id="cancel-befund-edit-btn">Bearbeitung abbrechen</button>
+          </div>
         </div>
+      </div>
 
-        <div class="field">
-          <label for="entry-andere">Andere Beschwerden</label>
-          <input type="text" id="entry-andere" placeholder="Freitext">
-        </div>
-
-        <div class="error-msg" id="entry-error"></div>
-
-        <div style="display:flex; gap:10px; margin-top:10px;">
-          <button class="btn btn-primary" id="save-entry-btn">Eintrag speichern</button>
-          <button class="btn btn-ghost hidden" id="cancel-edit-btn">Bearbeitung abbrechen</button>
+      <!-- Unterreiter: Medikationsphase hinzufügen -->
+      <div id="subpanel-entry-medikation" class="subpanel hidden">
+        <div class="card" id="medikation-form-card">
+          <h2 id="medikation-form-title">Neue Phase hinzufügen</h2>
+          <p class="hint">Für den Medikations-Zeitstrahl. Trag Phasen chronologisch ein, ältere zuerst.</p>
+          <div style="display:flex; gap:16px; flex-wrap:wrap;">
+            <div class="field" style="flex:1; min-width:200px;">
+              <label for="med-phase">Phasen-Titel</label>
+              <input type="text" id="med-phase" placeholder="z. B. Phase 3 – Entlassmedikation">
+            </div>
+            <div class="field" style="min-width:220px;">
+              <label for="med-zeitraum">Zeitraum</label>
+              <input type="text" id="med-zeitraum" placeholder="z. B. ab 02.07.2026 / bis 01/2026">
+            </div>
+          </div>
+          <div class="field">
+            <label for="med-medikamente">Medikamente (eine Zeile je Medikament)</label>
+            <textarea id="med-medikamente" rows="5" placeholder="Hydromorphon-HCl 4mg Retard – 1-1-1&#10;Pregabalin 150mg – 1-1-1&#10;..."></textarea>
+          </div>
+          <div class="field">
+            <label for="med-notiz">Notiz</label>
+            <textarea id="med-notiz" placeholder="z. B. Grund der Umstellung, Verträglichkeit ..."></textarea>
+          </div>
+          <div class="error-msg" id="medikation-error"></div>
+          <div style="display:flex; gap:10px;">
+            <button class="btn btn-primary" id="save-medikation-btn">Phase speichern</button>
+            <button class="btn btn-ghost hidden" id="cancel-medikation-edit-btn">Bearbeitung abbrechen</button>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ---------- TAB: Verlauf ---------- -->
+    <!-- ---------- TAB: Schmerztagebuch (Verlauf) ---------- -->
     <section id="panel-history" class="panel hidden">
       <div class="card">
-        <h2>Verlauf</h2>
+        <h2>Schmerztagebuch</h2>
         <p class="hint">Alle bisherigen Einträge. Zum Ansehen, Bearbeiten oder Drucken auswählen.</p>
         <ul class="entry-list" id="entry-list"><!-- JS --></ul>
       </div>
@@ -124,43 +202,8 @@
       </div>
     </section>
 
-    <!-- ---------- TAB: Befunde ---------- -->
+    <!-- ---------- TAB: Befunde (nur Liste/Ansicht) ---------- -->
     <section id="panel-befunde" class="panel hidden">
-      <div class="card" id="befunde-upload-card">
-        <h2 id="befund-form-title">Befund hinzufügen</h2>
-        <p class="hint">Arztbriefe, Bescheide, MRT-Befunde, Laborwerte etc. als Text/Markdown ablegen. Ärzt:innen mit Zugang können sie lesen, aber nicht verändern oder löschen. Originaldokumente (mit Stempel/Unterschrift) gibst du weiterhin separat als Kopie mit.</p>
-        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
-          <div class="field" style="flex:1; min-width:200px;">
-            <label for="befund-titel">Titel</label>
-            <input type="text" id="befund-titel" placeholder="z. B. Arztbrief Schmerztherapie Friedberg">
-          </div>
-          <div class="field" style="min-width:180px;">
-            <label for="befund-kategorie">Kategorie</label>
-            <select id="befund-kategorie">
-              <option>Arztbrief</option>
-              <option>Bildgebung (MRT/Röntgen)</option>
-              <option>Laborwerte</option>
-              <option>Bescheid / Antrag</option>
-              <option>Rezept / Verordnung</option>
-              <option>Sonstiges</option>
-            </select>
-          </div>
-          <div class="field" style="min-width:160px;">
-            <label for="befund-datum">Datum</label>
-            <input type="date" id="befund-datum">
-          </div>
-        </div>
-        <div class="field">
-          <label for="befund-inhalt">Inhalt (Markdown, z. B. mit # Überschrift, **fett**, Tabellen)</label>
-          <textarea id="befund-inhalt" rows="10" placeholder="# Arztbrief ...&#10;**Diagnose:** ...&#10;&#10;| Wert | Ergebnis |&#10;|---|---|&#10;| ... | ... |"></textarea>
-        </div>
-        <div class="error-msg" id="befund-error"></div>
-        <div style="display:flex; gap:10px;">
-          <button class="btn btn-primary" id="befund-upload-btn">Speichern</button>
-          <button class="btn btn-ghost hidden" id="cancel-befund-edit-btn">Bearbeitung abbrechen</button>
-        </div>
-      </div>
-
       <div class="card">
         <h2>Vorhandene Befunde</h2>
         <ul class="entry-list" id="befunde-list"><!-- JS --></ul>
@@ -177,36 +220,8 @@
       </div>
     </section>
 
-    <!-- ---------- TAB: Medikation ---------- -->
+    <!-- ---------- TAB: Medikation (nur Zeitstrahl) ---------- -->
     <section id="panel-medikation" class="panel hidden">
-      <div class="card" id="medikation-form-card">
-        <h2 id="medikation-form-title">Neue Phase hinzufügen</h2>
-        <p class="hint">Für den Medikations-Zeitstrahl. Trag Phasen chronologisch ein, ältere zuerst.</p>
-        <div style="display:flex; gap:16px; flex-wrap:wrap;">
-          <div class="field" style="flex:1; min-width:200px;">
-            <label for="med-phase">Phasen-Titel</label>
-            <input type="text" id="med-phase" placeholder="z. B. Phase 3 – Entlassmedikation">
-          </div>
-          <div class="field" style="min-width:220px;">
-            <label for="med-zeitraum">Zeitraum</label>
-            <input type="text" id="med-zeitraum" placeholder="z. B. ab 02.07.2026 / bis 01/2026">
-          </div>
-        </div>
-        <div class="field">
-          <label for="med-medikamente">Medikamente (eine Zeile je Medikament)</label>
-          <textarea id="med-medikamente" rows="5" placeholder="Hydromorphon-HCl 4mg Retard – 1-1-1&#10;Pregabalin 150mg – 1-1-1&#10;..."></textarea>
-        </div>
-        <div class="field">
-          <label for="med-notiz">Notiz</label>
-          <textarea id="med-notiz" placeholder="z. B. Grund der Umstellung, Verträglichkeit ..."></textarea>
-        </div>
-        <div class="error-msg" id="medikation-error"></div>
-        <div style="display:flex; gap:10px;">
-          <button class="btn btn-primary" id="save-medikation-btn">Phase speichern</button>
-          <button class="btn btn-ghost hidden" id="cancel-medikation-edit-btn">Bearbeitung abbrechen</button>
-        </div>
-      </div>
-
       <div class="card">
         <h2>Verlauf</h2>
         <div class="timeline" id="medikation-timeline"><!-- JS --></div>
