@@ -342,7 +342,13 @@ function buildChartSVG(entry) {
   });
 
   // Linien pro Region
-  REGIONS.forEach(r => {
+  // Damit sich exakt überlagernde Linien unterscheiden lassen, bekommt jede
+  // Region eine eigene, feste Strichstärke (abnehmend über die Liste) und
+  // zusätzlich einen hellen "Halo" hinter der Farblinie (Effekt wie bei
+  // überlagerten Routen auf Wanderkarten).
+  const strokeWidths = [3.6, 3.1, 2.6, 2.2, 1.9, 1.6, 1.4]; // eine je Region, Index = REGIONS-Reihenfolge
+
+  const regionPoints = REGIONS.map((r, idx) => {
     const vals = entry.values ? entry.values[r.key] || {} : {};
     let points = [];
     TIMEPOINTS.forEach((t, i) => {
@@ -351,11 +357,24 @@ function buildChartSVG(entry) {
         points.push([xFor(i), yFor(Number(v))]);
       }
     });
+    return { region: r, points, width: strokeWidths[idx] || 1.4 };
+  });
+
+  // 1. Durchgang: helle Halos hinter allen Linien (Trennung bei Überlagerung)
+  regionPoints.forEach(({ points, width }) => {
     if (points.length > 0) {
       const path = points.map(p => p.join(",")).join(" ");
-      svg += `<polyline points="${path}" fill="none" stroke="${r.color}" stroke-width="2"/>`;
+      svg += `<polyline points="${path}" fill="none" stroke="#FCFBF8" stroke-width="${width + 2.2}" stroke-linejoin="round" stroke-linecap="round"/>`;
+    }
+  });
+
+  // 2. Durchgang: die eigentlichen Farblinien + Punkte
+  regionPoints.forEach(({ region: r, points, width }) => {
+    if (points.length > 0) {
+      const path = points.map(p => p.join(",")).join(" ");
+      svg += `<polyline points="${path}" fill="none" stroke="${r.color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round"/>`;
       points.forEach(p => {
-        svg += `<circle cx="${p[0]}" cy="${p[1]}" r="3" fill="${r.color}"/>`;
+        svg += `<circle cx="${p[0]}" cy="${p[1]}" r="${width / 2 + 1.6}" fill="${r.color}" stroke="#FCFBF8" stroke-width="1"/>`;
       });
     }
   });
