@@ -343,10 +343,11 @@ function buildChartSVG(entry) {
 
   // Linien pro Region
   // Damit sich exakt überlagernde Linien unterscheiden lassen, bekommt jede
-  // Region eine eigene, feste Strichstärke (abnehmend über die Liste) und
-  // zusätzlich einen hellen "Halo" hinter der Farblinie (Effekt wie bei
-  // überlagerten Routen auf Wanderkarten).
-  const strokeWidths = [3.6, 3.1, 2.6, 2.2, 1.9, 1.6, 1.4]; // eine je Region, Index = REGIONS-Reihenfolge
+  // Region eine eigene, feste Strichstärke (abnehmend über die Liste) UND an
+  // jedem Messpunkt wird das echte Symbol der Region gezeichnet (✕, ○, △, …)
+  // statt eines neutralen Kreises – das entspricht auch der Legende auf dem
+  // Original-Papierformular und bleibt bei Überlagerung unterscheidbar.
+  const strokeWidths = [3.2, 2.8, 2.4, 2.1, 1.9, 1.7, 1.5]; // eine je Region, Index = REGIONS-Reihenfolge
 
   const regionPoints = REGIONS.map((r, idx) => {
     const vals = entry.values ? entry.values[r.key] || {} : {};
@@ -357,26 +358,26 @@ function buildChartSVG(entry) {
         points.push([xFor(i), yFor(Number(v))]);
       }
     });
-    return { region: r, points, width: strokeWidths[idx] || 1.4 };
+    return { region: r, points, width: strokeWidths[idx] || 1.5 };
   });
 
-  // 1. Durchgang: helle Halos hinter allen Linien (Trennung bei Überlagerung)
-  regionPoints.forEach(({ points, width }) => {
-    if (points.length > 0) {
-      const path = points.map(p => p.join(",")).join(" ");
-      svg += `<polyline points="${path}" fill="none" stroke="#FCFBF8" stroke-width="${width + 2.2}" stroke-linejoin="round" stroke-linecap="round"/>`;
-    }
-  });
-
-  // 2. Durchgang: die eigentlichen Farblinien + Punkte
+  // 1. Durchgang: nur die Linien (dünner Rand in Papierfarbe dient hier nur
+  // der Kantenglättung zwischen sich kreuzenden Linien, nicht der Trennung)
   regionPoints.forEach(({ region: r, points, width }) => {
     if (points.length > 0) {
       const path = points.map(p => p.join(",")).join(" ");
-      svg += `<polyline points="${path}" fill="none" stroke="${r.color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round"/>`;
-      points.forEach(p => {
-        svg += `<circle cx="${p[0]}" cy="${p[1]}" r="${width / 2 + 1.6}" fill="${r.color}" stroke="#FCFBF8" stroke-width="1"/>`;
-      });
+      svg += `<polyline points="${path}" fill="none" stroke="${r.color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
     }
+  });
+
+  // 2. Durchgang: die eigentlichen Symbole an jedem Messpunkt, mit weißem
+  // "Ausstich" (paint-order: stroke) damit sie sich von Linien und anderen
+  // Symbolen deutlich abheben – so bleibt jede Region erkennbar, auch wenn
+  // sich mehrere Linien exakt an einem Punkt treffen.
+  regionPoints.forEach(({ region: r, points }) => {
+    points.forEach(p => {
+      svg += `<text x="${p[0]}" y="${p[1]}" font-size="15" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="${r.color}" style="paint-order: stroke; stroke: #FCFBF8; stroke-width: 3px;">${r.symbol}</text>`;
+    });
   });
 
   svg += `</svg>`;
