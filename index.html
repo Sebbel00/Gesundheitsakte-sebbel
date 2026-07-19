@@ -206,6 +206,17 @@
     <section id="panel-befunde" class="panel hidden">
       <div class="card">
         <h2>Vorhandene Befunde</h2>
+        <div class="sort-bar no-print">
+          <label for="befunde-sort-field" style="margin:0;">Sortieren nach</label>
+          <select id="befunde-sort-field">
+            <option value="datum">Datum</option>
+            <option value="kategorie">Kategorie</option>
+          </select>
+          <select id="befunde-sort-dir">
+            <option value="desc">Absteigend</option>
+            <option value="asc">Aufsteigend</option>
+          </select>
+        </div>
         <ul class="entry-list" id="befunde-list"><!-- JS --></ul>
       </div>
 
@@ -224,6 +235,13 @@
     <section id="panel-medikation" class="panel hidden">
       <div class="card">
         <h2>Verlauf</h2>
+        <div class="sort-bar no-print">
+          <label for="medikation-sort-dir" style="margin:0;">Reihenfolge</label>
+          <select id="medikation-sort-dir">
+            <option value="asc">Älteste zuerst</option>
+            <option value="desc">Neueste zuerst</option>
+          </select>
+        </div>
         <div class="timeline" id="medikation-timeline"><!-- JS --></div>
       </div>
     </section>
