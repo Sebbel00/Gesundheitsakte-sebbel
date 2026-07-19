@@ -342,12 +342,13 @@ function buildChartSVG(entry) {
   });
 
   // Linien pro Region
-  // Damit sich exakt überlagernde Linien unterscheiden lassen, bekommt jede
-  // Region eine eigene, feste Strichstärke (abnehmend über die Liste) UND an
-  // jedem Messpunkt wird das echte Symbol der Region gezeichnet (✕, ○, △, …)
-  // statt eines neutralen Kreises – das entspricht auch der Legende auf dem
-  // Original-Papierformular und bleibt bei Überlagerung unterscheidbar.
-  const strokeWidths = [3.2, 2.8, 2.4, 2.1, 1.9, 1.7, 1.5]; // eine je Region, Index = REGIONS-Reihenfolge
+  // Damit sich exakt überlagernde Symbole unterscheiden lassen: jede Region
+  // bekommt eine eigene Strichstärke UND eine eigene Symbolgröße, beide
+  // absteigend über die REGIONS-Liste. Gezeichnet wird in derselben
+  // Reihenfolge, d. h. größere Symbole liegen im Hintergrund, kleinere
+  // werden zuletzt (also sichtbar obenauf) gezeichnet.
+  const strokeWidths = [3.2, 2.8, 2.4, 2.1, 1.9, 1.7, 1.5]; // eine je Region
+  const symbolSizes  = [19, 17.5, 16, 14.5, 13, 11.5, 10];   // eine je Region, größte zuerst
 
   const regionPoints = REGIONS.map((r, idx) => {
     const vals = entry.values ? entry.values[r.key] || {} : {};
@@ -358,11 +359,10 @@ function buildChartSVG(entry) {
         points.push([xFor(i), yFor(Number(v))]);
       }
     });
-    return { region: r, points, width: strokeWidths[idx] || 1.5 };
+    return { region: r, points, width: strokeWidths[idx] || 1.5, size: symbolSizes[idx] || 10 };
   });
 
-  // 1. Durchgang: nur die Linien (dünner Rand in Papierfarbe dient hier nur
-  // der Kantenglättung zwischen sich kreuzenden Linien, nicht der Trennung)
+  // 1. Durchgang: alle Linien
   regionPoints.forEach(({ region: r, points, width }) => {
     if (points.length > 0) {
       const path = points.map(p => p.join(",")).join(" ");
@@ -370,13 +370,10 @@ function buildChartSVG(entry) {
     }
   });
 
-  // 2. Durchgang: die eigentlichen Symbole an jedem Messpunkt, mit weißem
-  // "Ausstich" (paint-order: stroke) damit sie sich von Linien und anderen
-  // Symbolen deutlich abheben – so bleibt jede Region erkennbar, auch wenn
-  // sich mehrere Linien exakt an einem Punkt treffen.
-  regionPoints.forEach(({ region: r, points }) => {
+  // 2. Durchgang: Symbole, große zuerst (Hintergrund), kleine zuletzt (Vordergrund)
+  regionPoints.forEach(({ region: r, points, size }) => {
     points.forEach(p => {
-      svg += `<text x="${p[0]}" y="${p[1]}" font-size="15" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="${r.color}" style="paint-order: stroke; stroke: #FCFBF8; stroke-width: 3px;">${r.symbol}</text>`;
+      svg += `<text x="${p[0]}" y="${p[1]}" font-size="${size}" font-weight="700" text-anchor="middle" dominant-baseline="central" fill="${r.color}">${r.symbol}</text>`;
     });
   });
 
