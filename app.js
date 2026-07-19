@@ -353,13 +353,9 @@ async function loadHistory() {
   const list = document.getElementById("entry-list");
   list.innerHTML = "<li class='empty-state'>Lade …</li>";
 
-  let q;
-  if (currentRole === "patient") {
-    q = query(collection(db, "entries"), where("ownerUid", "==", currentUser.uid), orderBy("date", "desc"));
-  } else {
-    // Arzt: sieht alle Einträge (nur ein Patient in dieser App)
-    q = query(collection(db, "entries"), orderBy("date", "desc"));
-  }
+  // Alle Patienten- und Arzt-Konten sehen dieselben Einträge (keine Trennung
+  // nach einzelnem Konto), analog zu Befunde und Medikation.
+  const q = query(collection(db, "entries"), orderBy("date", "desc"));
 
   try {
     const snap = await getDocs(q);
