@@ -232,6 +232,20 @@ function switchTab(tab) {
 });
 
 // ---------------------------------------------------------------------------
+// SUBTABS (innerhalb "Neuer Eintrag": Schmerztagebuch / Befunde / Medikation)
+// ---------------------------------------------------------------------------
+function switchSubtab(subtab) {
+  document.querySelectorAll(".subtab").forEach(b => b.classList.remove("active"));
+  document.getElementById(`subtab-${subtab}`).classList.add("active");
+  document.querySelectorAll(".subpanel").forEach(p => p.classList.add("hidden"));
+  document.getElementById(`subpanel-${subtab}`).classList.remove("hidden");
+}
+["entry-schmerz", "entry-befunde", "entry-medikation"].forEach(t => {
+  const btn = document.getElementById(`subtab-${t}`);
+  if (btn) btn.addEventListener("click", () => switchSubtab(t));
+});
+
+// ---------------------------------------------------------------------------
 // EINTRAGSFORMULAR AUFBAUEN
 // ---------------------------------------------------------------------------
 function buildEntryForm() {
