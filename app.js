@@ -342,13 +342,11 @@ function buildChartSVG(entry) {
   });
 
   // Linien pro Region
-  // Damit sich exakt überlagernde Symbole unterscheiden lassen: jede Region
-  // bekommt eine eigene Strichstärke UND eine eigene Symbolgröße, beide
-  // absteigend über die REGIONS-Liste. Gezeichnet wird in derselben
-  // Reihenfolge, d. h. größere Symbole liegen im Hintergrund, kleinere
-  // werden zuletzt (also sichtbar obenauf) gezeichnet.
-  const strokeWidths = [3.2, 2.8, 2.4, 2.1, 1.9, 1.7, 1.5]; // eine je Region
-  const symbolSizes  = [19, 17.5, 16, 14.5, 13, 11.5, 10];   // eine je Region, größte zuerst
+  // Alle Linien haben dieselbe Strichstärke. Die Symbolgröße dagegen ist
+  // stark gestuft (größte Region zuerst/hinten, kleinste zuletzt/vorne),
+  // damit sich exakt überlagernde Symbole klar unterscheiden lassen.
+  const LINE_WIDTH = 2.4;
+  const symbolSizes = [24, 20, 16.5, 13.5, 11, 9, 7.5]; // eine je Region, größte zuerst
 
   const regionPoints = REGIONS.map((r, idx) => {
     const vals = entry.values ? entry.values[r.key] || {} : {};
@@ -359,14 +357,14 @@ function buildChartSVG(entry) {
         points.push([xFor(i), yFor(Number(v))]);
       }
     });
-    return { region: r, points, width: strokeWidths[idx] || 1.5, size: symbolSizes[idx] || 10 };
+    return { region: r, points, size: symbolSizes[idx] || 7.5 };
   });
 
   // 1. Durchgang: alle Linien
-  regionPoints.forEach(({ region: r, points, width }) => {
+  regionPoints.forEach(({ region: r, points }) => {
     if (points.length > 0) {
       const path = points.map(p => p.join(",")).join(" ");
-      svg += `<polyline points="${path}" fill="none" stroke="${r.color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
+      svg += `<polyline points="${path}" fill="none" stroke="${r.color}" stroke-width="${LINE_WIDTH}" stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
     }
   });
 
