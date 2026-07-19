@@ -74,6 +74,68 @@ function formatDateDE(iso) {
   return `${d}.${m}.${y}`;
 }
 
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function inlineMd(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/(?<!\*)\*(?!\*)(.+?)\*(?!\*)/g, "<em>$1</em>");
+}
+
+// Sehr leichtgewichtiger Markdown-Renderer: Überschriften, Fett/Kursiv,
+// Trennlinien, Listen und einfache Tabellen. Reicht für die Struktur der
+// eigenen Arztbriefe/Befunde vollständig aus, ohne externe Bibliothek.
+function mdToHtml(raw) {
+  const lines = escapeHtml(raw).split("\n");
+  let html = "";
+  let i = 0;
+  let inList = false;
+
+  function closeList() {
+    if (inList) { html += "</ul>"; inList = false; }
+  }
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Tabelle erkennen (Zeile beginnt mit |, nächste ist Trennzeile aus --- / :--)
+    if (/^\s*\|/.test(line) && lines[i + 1] && /^\s*\|?[\s:|-]+\|?\s*$/.test(lines[i + 1])) {
+      closeList();
+      const headerCells = line.split("|").map(c => c.trim()).filter((c, idx, arr) => !(idx === 0 && c === "") && !(idx === arr.length - 1 && c === ""));
+      html += "<table><thead><tr>" + headerCells.map(c => `<th>${inlineMd(c)}</th>`).join("") + "</tr></thead><tbody>";
+      i += 2;
+      while (i < lines.length && /^\s*\|/.test(lines[i])) {
+        const cells = lines[i].split("|").map(c => c.trim()).filter((c, idx, arr) => !(idx === 0 && c === "") && !(idx === arr.length - 1 && c === ""));
+        html += "<tr>" + cells.map(c => `<td>${inlineMd(c)}</td>`).join("") + "</tr>";
+        i++;
+      }
+      html += "</tbody></table>";
+      continue;
+    }
+
+    if (/^###\s+/.test(line)) { closeList(); html += `<h3>${inlineMd(line.replace(/^###\s+/, ""))}</h3>`; i++; continue; }
+    if (/^##\s+/.test(line))  { closeList(); html += `<h2>${inlineMd(line.replace(/^##\s+/, ""))}</h2>`; i++; continue; }
+    if (/^#\s+/.test(line))   { closeList(); html += `<h1>${inlineMd(line.replace(/^#\s+/, ""))}</h1>`; i++; continue; }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { closeList(); html += "<hr>"; i++; continue; }
+
+    if (/^\s*[-*]\s+/.test(line)) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      html += `<li>${inlineMd(line.replace(/^\s*[-*]\s+/, ""))}</li>`;
+      i++;
+      continue;
+    }
+
+    closeList();
+    if (line.trim() === "") { i++; continue; }
+    html += `<p>${inlineMd(line)}</p>`;
+    i++;
+  }
+  closeList();
+  return html;
+}
+
 // ---------------------------------------------------------------------------
 // LOGIN
 // ---------------------------------------------------------------------------
@@ -142,10 +204,16 @@ onAuthStateChanged(auth, async (user) => {
     switchTab("entry");
   }
 
+  // Bearbeiten/Hochladen nur für Patient sichtbar, Ärzte sehen nur Lese-Ansichten
+  document.getElementById("befunde-upload-card").classList.toggle("hidden", currentRole !== "patient");
+  document.getElementById("medikation-form-card").classList.toggle("hidden", currentRole !== "patient");
+
   buildEntryForm();
   document.getElementById("entry-date").value = todayISO();
   await loadHistory();
   if (currentRole === "patient") await loadUserList();
+  await loadBefunde();
+  await loadMedikation();
 });
 
 // ---------------------------------------------------------------------------
@@ -158,7 +226,7 @@ function switchTab(tab) {
   document.querySelectorAll(".panel").forEach(p => p.classList.add("hidden"));
   document.getElementById(`panel-${tab}`).classList.remove("hidden");
 }
-["entry", "history", "users"].forEach(t => {
+["entry", "history", "befunde", "medikation", "users"].forEach(t => {
   const btn = document.getElementById(`tab-${t}`);
   if (btn) btn.addEventListener("click", () => switchTab(t));
 });
@@ -544,5 +612,241 @@ async function loadUserList() {
     });
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan='3'>Fehler: ${err.message}</td></tr>`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// BEFUNDE (Markdown-Texteinträge, keine Dateien/Storage)
+// ---------------------------------------------------------------------------
+let editingBefundId = null;
+let currentBefundDetail = null;
+
+function resetBefundForm() {
+  document.getElementById("befund-titel").value = "";
+  document.getElementById("befund-kategorie").selectedIndex = 0;
+  document.getElementById("befund-datum").value = "";
+  document.getElementById("befund-inhalt").value = "";
+  document.getElementById("befund-error").textContent = "";
+  editingBefundId = null;
+  document.getElementById("befund-form-title").textContent = "Befund hinzufügen";
+  document.getElementById("cancel-befund-edit-btn").classList.add("hidden");
+}
+document.getElementById("cancel-befund-edit-btn").addEventListener("click", resetBefundForm);
+
+document.getElementById("befund-upload-btn").addEventListener("click", async () => {
+  const errEl = document.getElementById("befund-error");
+  errEl.textContent = "";
+
+  const titel = document.getElementById("befund-titel").value.trim();
+  const kategorie = document.getElementById("befund-kategorie").value;
+  const datum = document.getElementById("befund-datum").value;
+  const inhalt = document.getElementById("befund-inhalt").value.trim();
+
+  if (!titel) { errEl.textContent = "Bitte einen Titel angeben."; return; }
+  if (!inhalt) { errEl.textContent = "Bitte einen Inhalt eintragen."; return; }
+
+  const btn = document.getElementById("befund-upload-btn");
+  btn.disabled = true;
+  try {
+    if (editingBefundId) {
+      await updateDoc(doc(db, "befunde", editingBefundId), {
+        titel, kategorie, datum: datum || null, inhalt, updatedAt: serverTimestamp(),
+      });
+      showToast("Befund aktualisiert.");
+    } else {
+      await addDoc(collection(db, "befunde"), {
+        titel, kategorie, datum: datum || null, inhalt,
+        erstelltVon: currentUsername,
+        createdAt: serverTimestamp(),
+      });
+      showToast("Befund gespeichert.");
+    }
+    resetBefundForm();
+    await loadBefunde();
+  } catch (err) {
+    errEl.textContent = "Fehler beim Speichern: " + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function loadBefunde() {
+  const list = document.getElementById("befunde-list");
+  list.innerHTML = "<li class='empty-state'>Lade …</li>";
+  try {
+    const q = query(collection(db, "befunde"), orderBy("createdAt", "desc"));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      list.innerHTML = "<li class='empty-state'>Noch keine Befunde erfasst.</li>";
+      return;
+    }
+    list.innerHTML = "";
+    snap.forEach(d => {
+      const b = d.data();
+      const li = document.createElement("li");
+      li.className = "entry-row";
+      li.innerHTML = `
+        <div>
+          <div class="date">${b.titel}</div>
+          <div class="meta">${b.kategorie || ""} ${b.datum ? "· " + formatDateDE(b.datum) : ""}</div>
+        </div>
+        <div class="entry-actions">
+          <button class="btn btn-sm" data-action="view" data-id="${d.id}">Anzeigen</button>
+        </div>
+      `;
+      list.appendChild(li);
+    });
+    list.querySelectorAll('[data-action="view"]').forEach(btn => {
+      btn.addEventListener("click", () => showBefundDetail(btn.dataset.id));
+    });
+  } catch (err) {
+    list.innerHTML = `<li class='empty-state'>Fehler beim Laden: ${err.message}</li>`;
+  }
+}
+
+async function showBefundDetail(id) {
+  const snap = await getDoc(doc(db, "befunde", id));
+  if (!snap.exists()) return;
+  const b = { id, ...snap.data() };
+  currentBefundDetail = b;
+
+  document.getElementById("befund-detail-card").classList.remove("hidden");
+  document.getElementById("befund-detail-title").textContent = b.titel;
+  document.getElementById("befund-detail-meta").textContent =
+    [b.kategorie, b.datum ? formatDateDE(b.datum) : null].filter(Boolean).join(" · ");
+  document.getElementById("befund-detail-content").innerHTML = mdToHtml(b.inhalt || "");
+
+  document.getElementById("befund-edit-btn").classList.toggle("hidden", currentRole !== "patient");
+  document.getElementById("befund-delete-btn").classList.toggle("hidden", currentRole !== "patient");
+
+  document.getElementById("befund-detail-card").scrollIntoView({ behavior: "smooth" });
+}
+
+document.getElementById("befund-edit-btn").addEventListener("click", () => {
+  if (!currentBefundDetail) return;
+  editingBefundId = currentBefundDetail.id;
+  document.getElementById("befund-form-title").textContent = "Befund bearbeiten";
+  document.getElementById("cancel-befund-edit-btn").classList.remove("hidden");
+  document.getElementById("befund-titel").value = currentBefundDetail.titel || "";
+  document.getElementById("befund-kategorie").value = currentBefundDetail.kategorie || "Arztbrief";
+  document.getElementById("befund-datum").value = currentBefundDetail.datum || "";
+  document.getElementById("befund-inhalt").value = currentBefundDetail.inhalt || "";
+  document.getElementById("befunde-upload-card").scrollIntoView({ behavior: "smooth" });
+});
+
+document.getElementById("befund-delete-btn").addEventListener("click", async () => {
+  if (!currentBefundDetail) return;
+  if (!confirm(`Befund "${currentBefundDetail.titel}" wirklich löschen?`)) return;
+  await deleteDoc(doc(db, "befunde", currentBefundDetail.id));
+  document.getElementById("befund-detail-card").classList.add("hidden");
+  showToast("Befund gelöscht.");
+  await loadBefunde();
+});
+
+// ---------------------------------------------------------------------------
+// MEDIKATION (Zeitstrahl)
+// ---------------------------------------------------------------------------
+let editingMedikationId = null;
+
+function resetMedikationForm() {
+  document.getElementById("med-phase").value = "";
+  document.getElementById("med-zeitraum").value = "";
+  document.getElementById("med-medikamente").value = "";
+  document.getElementById("med-notiz").value = "";
+  document.getElementById("medikation-error").textContent = "";
+  editingMedikationId = null;
+  document.getElementById("medikation-form-title").textContent = "Neue Phase hinzufügen";
+  document.getElementById("cancel-medikation-edit-btn").classList.add("hidden");
+}
+document.getElementById("cancel-medikation-edit-btn").addEventListener("click", resetMedikationForm);
+
+document.getElementById("save-medikation-btn").addEventListener("click", async () => {
+  const errEl = document.getElementById("medikation-error");
+  errEl.textContent = "";
+  const phase = document.getElementById("med-phase").value.trim();
+  const zeitraum = document.getElementById("med-zeitraum").value.trim();
+  const medikamente = document.getElementById("med-medikamente").value.trim();
+  const notiz = document.getElementById("med-notiz").value.trim();
+
+  if (!phase) { errEl.textContent = "Bitte einen Phasen-Titel angeben."; return; }
+
+  const btn = document.getElementById("save-medikation-btn");
+  btn.disabled = true;
+  try {
+    if (editingMedikationId) {
+      await updateDoc(doc(db, "medikation", editingMedikationId), {
+        phase, zeitraum, medikamente, notiz, updatedAt: serverTimestamp(),
+      });
+      showToast("Phase aktualisiert.");
+    } else {
+      await addDoc(collection(db, "medikation"), {
+        phase, zeitraum, medikamente, notiz,
+        createdAt: serverTimestamp(),
+      });
+      showToast("Phase gespeichert.");
+    }
+    resetMedikationForm();
+    await loadMedikation();
+  } catch (err) {
+    errEl.textContent = "Fehler beim Speichern: " + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function loadMedikation() {
+  const wrap = document.getElementById("medikation-timeline");
+  wrap.innerHTML = "<p class='empty-state'>Lade …</p>";
+  try {
+    const q = query(collection(db, "medikation"), orderBy("createdAt", "asc"));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      wrap.innerHTML = "<p class='empty-state'>Noch keine Phasen erfasst.</p>";
+      return;
+    }
+    wrap.innerHTML = "";
+    snap.forEach(d => {
+      const m = d.data();
+      const div = document.createElement("div");
+      div.className = "timeline-item";
+      div.innerHTML = `
+        <h3>${m.phase}</h3>
+        ${m.zeitraum ? `<div class="zeitraum">${m.zeitraum}</div>` : ""}
+        ${m.medikamente ? `<pre>${m.medikamente}</pre>` : ""}
+        ${m.notiz ? `<div class="notiz">${m.notiz}</div>` : ""}
+        ${currentRole === "patient" ? `
+          <div class="item-actions">
+            <button class="btn btn-sm" data-action="edit" data-id="${d.id}">Bearbeiten</button>
+            <button class="btn btn-sm btn-danger" data-action="delete" data-id="${d.id}">Löschen</button>
+          </div>` : ""}
+      `;
+      wrap.appendChild(div);
+    });
+
+    wrap.querySelectorAll('[data-action="edit"]').forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const snapDoc = await getDoc(doc(db, "medikation", btn.dataset.id));
+        if (!snapDoc.exists()) return;
+        const m = snapDoc.data();
+        editingMedikationId = btn.dataset.id;
+        document.getElementById("medikation-form-title").textContent = "Phase bearbeiten";
+        document.getElementById("cancel-medikation-edit-btn").classList.remove("hidden");
+        document.getElementById("med-phase").value = m.phase || "";
+        document.getElementById("med-zeitraum").value = m.zeitraum || "";
+        document.getElementById("med-medikamente").value = m.medikamente || "";
+        document.getElementById("med-notiz").value = m.notiz || "";
+        document.getElementById("medikation-form-card").scrollIntoView({ behavior: "smooth" });
+      });
+    });
+    wrap.querySelectorAll('[data-action="delete"]').forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Diese Phase wirklich löschen?")) return;
+        await deleteDoc(doc(db, "medikation", btn.dataset.id));
+        showToast("Phase gelöscht.");
+        await loadMedikation();
+      });
+    });
+  } catch (err) {
+    wrap.innerHTML = `<p class='empty-state'>Fehler beim Laden: ${err.message}</p>`;
   }
 }
