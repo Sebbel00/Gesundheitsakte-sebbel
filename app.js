@@ -634,6 +634,7 @@ async function loadUserList() {
 // ---------------------------------------------------------------------------
 let editingBefundId = null;
 let currentBefundDetail = null;
+let befundeCache = [];
 
 function resetBefundForm() {
   document.getElementById("befund-titel").value = "";
@@ -688,35 +689,63 @@ async function loadBefunde() {
   const list = document.getElementById("befunde-list");
   list.innerHTML = "<li class='empty-state'>Lade …</li>";
   try {
-    const q = query(collection(db, "befunde"), orderBy("createdAt", "desc"));
-    const snap = await getDocs(q);
-    if (snap.empty) {
-      list.innerHTML = "<li class='empty-state'>Noch keine Befunde erfasst.</li>";
-      return;
-    }
-    list.innerHTML = "";
-    snap.forEach(d => {
-      const b = d.data();
-      const li = document.createElement("li");
-      li.className = "entry-row";
-      li.innerHTML = `
-        <div>
-          <div class="date">${b.titel}</div>
-          <div class="meta">${b.kategorie || ""} ${b.datum ? "· " + formatDateDE(b.datum) : ""}</div>
-        </div>
-        <div class="entry-actions">
-          <button class="btn btn-sm" data-action="view" data-id="${d.id}">Anzeigen</button>
-        </div>
-      `;
-      list.appendChild(li);
-    });
-    list.querySelectorAll('[data-action="view"]').forEach(btn => {
-      btn.addEventListener("click", () => showBefundDetail(btn.dataset.id));
-    });
+    const snap = await getDocs(collection(db, "befunde"));
+    befundeCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderBefundeList();
   } catch (err) {
     list.innerHTML = `<li class='empty-state'>Fehler beim Laden: ${err.message}</li>`;
   }
 }
+
+function renderBefundeList() {
+  const list = document.getElementById("befunde-list");
+  const field = document.getElementById("befunde-sort-field").value; // "datum" | "kategorie"
+  const dir = document.getElementById("befunde-sort-dir").value;     // "asc" | "desc"
+
+  if (befundeCache.length === 0) {
+    list.innerHTML = "<li class='empty-state'>Noch keine Befunde erfasst.</li>";
+    return;
+  }
+
+  const sorted = [...befundeCache].sort((a, b) => {
+    let va, vb;
+    if (field === "datum") {
+      // Einträge ohne Datum landen unabhängig von der Richtung immer ans Ende
+      if (!a.datum && !b.datum) return 0;
+      if (!a.datum) return 1;
+      if (!b.datum) return -1;
+      va = a.datum; vb = b.datum;
+    } else {
+      va = (a.kategorie || "").toLowerCase();
+      vb = (b.kategorie || "").toLowerCase();
+    }
+    if (va < vb) return dir === "asc" ? -1 : 1;
+    if (va > vb) return dir === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  list.innerHTML = "";
+  sorted.forEach(b => {
+    const li = document.createElement("li");
+    li.className = "entry-row";
+    li.innerHTML = `
+      <div>
+        <div class="date">${b.titel}</div>
+        <div class="meta">${b.kategorie || ""} ${b.datum ? "· " + formatDateDE(b.datum) : ""}</div>
+      </div>
+      <div class="entry-actions">
+        <button class="btn btn-sm" data-action="view" data-id="${b.id}">Anzeigen</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+  list.querySelectorAll('[data-action="view"]').forEach(btn => {
+    btn.addEventListener("click", () => showBefundDetail(btn.dataset.id));
+  });
+}
+
+document.getElementById("befunde-sort-field").addEventListener("change", renderBefundeList);
+document.getElementById("befunde-sort-dir").addEventListener("change", renderBefundeList);
 
 async function showBefundDetail(id) {
   const snap = await getDoc(doc(db, "befunde", id));
@@ -761,6 +790,7 @@ document.getElementById("befund-delete-btn").addEventListener("click", async () 
 // MEDIKATION (Zeitstrahl)
 // ---------------------------------------------------------------------------
 let editingMedikationId = null;
+let medikationCache = [];
 
 function resetMedikationForm() {
   document.getElementById("med-phase").value = "";
@@ -814,53 +844,65 @@ async function loadMedikation() {
   try {
     const q = query(collection(db, "medikation"), orderBy("createdAt", "asc"));
     const snap = await getDocs(q);
-    if (snap.empty) {
-      wrap.innerHTML = "<p class='empty-state'>Noch keine Phasen erfasst.</p>";
-      return;
-    }
-    wrap.innerHTML = "";
-    snap.forEach(d => {
-      const m = d.data();
-      const div = document.createElement("div");
-      div.className = "timeline-item";
-      div.innerHTML = `
-        <h3>${m.phase}</h3>
-        ${m.zeitraum ? `<div class="zeitraum">${m.zeitraum}</div>` : ""}
-        ${m.medikamente ? `<pre>${m.medikamente}</pre>` : ""}
-        ${m.notiz ? `<div class="notiz">${m.notiz}</div>` : ""}
-        ${currentRole === "patient" ? `
-          <div class="item-actions">
-            <button class="btn btn-sm" data-action="edit" data-id="${d.id}">Bearbeiten</button>
-            <button class="btn btn-sm btn-danger" data-action="delete" data-id="${d.id}">Löschen</button>
-          </div>` : ""}
-      `;
-      wrap.appendChild(div);
-    });
-
-    wrap.querySelectorAll('[data-action="edit"]').forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const snapDoc = await getDoc(doc(db, "medikation", btn.dataset.id));
-        if (!snapDoc.exists()) return;
-        const m = snapDoc.data();
-        editingMedikationId = btn.dataset.id;
-        document.getElementById("medikation-form-title").textContent = "Phase bearbeiten";
-        document.getElementById("cancel-medikation-edit-btn").classList.remove("hidden");
-        document.getElementById("med-phase").value = m.phase || "";
-        document.getElementById("med-zeitraum").value = m.zeitraum || "";
-        document.getElementById("med-medikamente").value = m.medikamente || "";
-        document.getElementById("med-notiz").value = m.notiz || "";
-        document.getElementById("medikation-form-card").scrollIntoView({ behavior: "smooth" });
-      });
-    });
-    wrap.querySelectorAll('[data-action="delete"]').forEach(btn => {
-      btn.addEventListener("click", async () => {
-        if (!confirm("Diese Phase wirklich löschen?")) return;
-        await deleteDoc(doc(db, "medikation", btn.dataset.id));
-        showToast("Phase gelöscht.");
-        await loadMedikation();
-      });
-    });
+    medikationCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderMedikationTimeline();
   } catch (err) {
     wrap.innerHTML = `<p class='empty-state'>Fehler beim Laden: ${err.message}</p>`;
   }
 }
+
+function renderMedikationTimeline() {
+  const wrap = document.getElementById("medikation-timeline");
+  const dir = document.getElementById("medikation-sort-dir").value; // "asc" | "desc"
+
+  if (medikationCache.length === 0) {
+    wrap.innerHTML = "<p class='empty-state'>Noch keine Phasen erfasst.</p>";
+    return;
+  }
+
+  const ordered = dir === "asc" ? medikationCache : [...medikationCache].reverse();
+
+  wrap.innerHTML = "";
+  ordered.forEach(m => {
+    const div = document.createElement("div");
+    div.className = "timeline-item";
+    div.innerHTML = `
+      <h3>${m.phase}</h3>
+      ${m.zeitraum ? `<div class="zeitraum">${m.zeitraum}</div>` : ""}
+      ${m.medikamente ? `<pre>${m.medikamente}</pre>` : ""}
+      ${m.notiz ? `<div class="notiz">${m.notiz}</div>` : ""}
+      ${currentRole === "patient" ? `
+        <div class="item-actions">
+          <button class="btn btn-sm" data-action="edit" data-id="${m.id}">Bearbeiten</button>
+          <button class="btn btn-sm btn-danger" data-action="delete" data-id="${m.id}">Löschen</button>
+        </div>` : ""}
+    `;
+    wrap.appendChild(div);
+  });
+
+  wrap.querySelectorAll('[data-action="edit"]').forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const snapDoc = await getDoc(doc(db, "medikation", btn.dataset.id));
+      if (!snapDoc.exists()) return;
+      const m = snapDoc.data();
+      editingMedikationId = btn.dataset.id;
+      document.getElementById("medikation-form-title").textContent = "Phase bearbeiten";
+      document.getElementById("cancel-medikation-edit-btn").classList.remove("hidden");
+      document.getElementById("med-phase").value = m.phase || "";
+      document.getElementById("med-zeitraum").value = m.zeitraum || "";
+      document.getElementById("med-medikamente").value = m.medikamente || "";
+      document.getElementById("med-notiz").value = m.notiz || "";
+      document.getElementById("medikation-form-card").scrollIntoView({ behavior: "smooth" });
+    });
+  });
+  wrap.querySelectorAll('[data-action="delete"]').forEach(btn => {
+    btn.addEventListener("click", async () => {
+      if (!confirm("Diese Phase wirklich löschen?")) return;
+      await deleteDoc(doc(db, "medikation", btn.dataset.id));
+      showToast("Phase gelöscht.");
+      await loadMedikation();
+    });
+  });
+}
+
+document.getElementById("medikation-sort-dir").addEventListener("change", renderMedikationTimeline);
