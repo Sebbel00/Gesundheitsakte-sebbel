@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Schmerztagebuch – Sebastian Beller</title>
+<title>Gesundheitsakte – Sebastian Beller</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
   <!-- ===================== LOGIN ===================== -->
   <div id="view-login" class="login-wrap">
     <div class="login-card">
-      <div class="mark">Schmerztagebuch</div>
+      <div class="mark">Gesundheitsakte</div>
       <div class="sub">Anmeldung mit Benutzername &amp; Passwort</div>
       <form id="login-form" autocomplete="on">
         <div class="field">
@@ -35,7 +35,7 @@
 
     <div class="topbar no-print">
       <div class="brand">
-        <span class="mark">Schmerztagebuch</span>
+        <span class="mark">Gesundheitsakte</span>
         <span class="sub">Sebastian Beller</span>
       </div>
       <div class="user-chip">
@@ -47,10 +47,10 @@
 
     <nav class="tabs no-print">
       <button class="tab active" data-tab="entry" id="tab-entry">Neuer Eintrag</button>
-      <button class="tab" data-tab="history" id="tab-history">Verlauf</button>
+      <button class="tab" data-tab="history" id="tab-history">Schmerztagebuch</button>
+      <button class="tab" data-tab="befunde" id="tab-befunde">Befunde</button>
+      <button class="tab" data-tab="medikation" id="tab-medikation">Medikation</button>
       <button class="tab" data-tab="users" id="tab-users">Nutzerverwaltung</button>
-      <button class="tab" disabled title="Folgt später">Befunde (bald)</button>
-      <button class="tab" disabled title="Folgt später">Medikation (bald)</button>
     </nav>
 
     <!-- ---------- TAB: Eintrag ---------- -->
@@ -121,6 +121,95 @@
           <button class="btn" id="edit-entry-btn">Bearbeiten</button>
           <button class="btn btn-danger" id="delete-entry-btn">Löschen</button>
         </div>
+      </div>
+    </section>
+
+    <!-- ---------- TAB: Befunde ---------- -->
+    <section id="panel-befunde" class="panel hidden">
+      <div class="card" id="befunde-upload-card">
+        <h2 id="befund-form-title">Befund hinzufügen</h2>
+        <p class="hint">Arztbriefe, Bescheide, MRT-Befunde, Laborwerte etc. als Text/Markdown ablegen. Ärzt:innen mit Zugang können sie lesen, aber nicht verändern oder löschen. Originaldokumente (mit Stempel/Unterschrift) gibst du weiterhin separat als Kopie mit.</p>
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="field" style="flex:1; min-width:200px;">
+            <label for="befund-titel">Titel</label>
+            <input type="text" id="befund-titel" placeholder="z. B. Arztbrief Schmerztherapie Friedberg">
+          </div>
+          <div class="field" style="min-width:180px;">
+            <label for="befund-kategorie">Kategorie</label>
+            <select id="befund-kategorie">
+              <option>Arztbrief</option>
+              <option>Bildgebung (MRT/Röntgen)</option>
+              <option>Laborwerte</option>
+              <option>Bescheid / Antrag</option>
+              <option>Rezept / Verordnung</option>
+              <option>Sonstiges</option>
+            </select>
+          </div>
+          <div class="field" style="min-width:160px;">
+            <label for="befund-datum">Datum</label>
+            <input type="date" id="befund-datum">
+          </div>
+        </div>
+        <div class="field">
+          <label for="befund-inhalt">Inhalt (Markdown, z. B. mit # Überschrift, **fett**, Tabellen)</label>
+          <textarea id="befund-inhalt" rows="10" placeholder="# Arztbrief ...&#10;**Diagnose:** ...&#10;&#10;| Wert | Ergebnis |&#10;|---|---|&#10;| ... | ... |"></textarea>
+        </div>
+        <div class="error-msg" id="befund-error"></div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-primary" id="befund-upload-btn">Speichern</button>
+          <button class="btn btn-ghost hidden" id="cancel-befund-edit-btn">Bearbeitung abbrechen</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Vorhandene Befunde</h2>
+        <ul class="entry-list" id="befunde-list"><!-- JS --></ul>
+      </div>
+
+      <div class="card hidden" id="befund-detail-card">
+        <h2 id="befund-detail-title"></h2>
+        <p class="hint" id="befund-detail-meta"></p>
+        <div id="befund-detail-content" class="md-render"></div>
+        <div style="display:flex; gap:10px; margin-top:16px;" class="no-print">
+          <button class="btn" id="befund-edit-btn">Bearbeiten</button>
+          <button class="btn btn-danger" id="befund-delete-btn">Löschen</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- TAB: Medikation ---------- -->
+    <section id="panel-medikation" class="panel hidden">
+      <div class="card" id="medikation-form-card">
+        <h2 id="medikation-form-title">Neue Phase hinzufügen</h2>
+        <p class="hint">Für den Medikations-Zeitstrahl. Trag Phasen chronologisch ein, ältere zuerst.</p>
+        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+          <div class="field" style="flex:1; min-width:200px;">
+            <label for="med-phase">Phasen-Titel</label>
+            <input type="text" id="med-phase" placeholder="z. B. Phase 3 – Entlassmedikation">
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label for="med-zeitraum">Zeitraum</label>
+            <input type="text" id="med-zeitraum" placeholder="z. B. ab 02.07.2026 / bis 01/2026">
+          </div>
+        </div>
+        <div class="field">
+          <label for="med-medikamente">Medikamente (eine Zeile je Medikament)</label>
+          <textarea id="med-medikamente" rows="5" placeholder="Hydromorphon-HCl 4mg Retard – 1-1-1&#10;Pregabalin 150mg – 1-1-1&#10;..."></textarea>
+        </div>
+        <div class="field">
+          <label for="med-notiz">Notiz</label>
+          <textarea id="med-notiz" placeholder="z. B. Grund der Umstellung, Verträglichkeit ..."></textarea>
+        </div>
+        <div class="error-msg" id="medikation-error"></div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-primary" id="save-medikation-btn">Phase speichern</button>
+          <button class="btn btn-ghost hidden" id="cancel-medikation-edit-btn">Bearbeitung abbrechen</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Verlauf</h2>
+        <div class="timeline" id="medikation-timeline"><!-- JS --></div>
       </div>
     </section>
 
