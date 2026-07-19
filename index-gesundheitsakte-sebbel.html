@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Schmerztagebuch – Sebastian Beller</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app-root">
+
+  <!-- ===================== LOGIN ===================== -->
+  <div id="view-login" class="login-wrap">
+    <div class="login-card">
+      <div class="mark">Schmerztagebuch</div>
+      <div class="sub">Anmeldung mit Benutzername &amp; Passwort</div>
+      <form id="login-form" autocomplete="on">
+        <div class="field">
+          <label for="login-username">Benutzername</label>
+          <input type="text" id="login-username" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="login-password">Passwort</label>
+          <input type="password" id="login-password" autocomplete="current-password" required>
+        </div>
+        <div class="error-msg" id="login-error"></div>
+        <button type="submit" class="btn btn-primary" id="login-submit">Anmelden</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===================== APP (nach Login) ===================== -->
+  <div id="view-app" class="hidden">
+
+    <div class="topbar no-print">
+      <div class="brand">
+        <span class="mark">Schmerztagebuch</span>
+        <span class="sub">Sebastian Beller</span>
+      </div>
+      <div class="user-chip">
+        <span id="current-username"></span>
+        <span class="role-badge" id="current-role-badge"></span>
+        <button class="btn btn-sm" id="logout-btn">Abmelden</button>
+      </div>
+    </div>
+
+    <nav class="tabs no-print">
+      <button class="tab active" data-tab="entry" id="tab-entry">Neuer Eintrag</button>
+      <button class="tab" data-tab="history" id="tab-history">Verlauf</button>
+      <button class="tab" data-tab="users" id="tab-users">Nutzerverwaltung</button>
+      <button class="tab" disabled title="Folgt später">Befunde (bald)</button>
+      <button class="tab" disabled title="Folgt später">Medikation (bald)</button>
+    </nav>
+
+    <!-- ---------- TAB: Eintrag ---------- -->
+    <section id="panel-entry" class="panel">
+      <div class="card">
+        <h2 id="entry-form-title">Neuer Eintrag</h2>
+        <p class="hint">Trag bitte alle 2 Stunden die Schmerzintensität (0 = kein Schmerz, 10 = stärkster vorstellbarer Schmerz) für jede Region ein.</p>
+
+        <div class="field" style="max-width:220px;">
+          <label for="entry-date">Datum</label>
+          <input type="date" id="entry-date">
+        </div>
+
+        <div class="table-scroll">
+          <table class="pain-table" id="pain-table">
+            <!-- wird per JS befüllt -->
+          </table>
+        </div>
+
+        <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:18px;">
+          <div class="field" style="flex:1; min-width:220px;">
+            <label for="entry-medikamente">Medikamente (heute genommen / bei Bedarf)</label>
+            <textarea id="entry-medikamente" placeholder="z. B. Schmerzmedikation nach Plan, zusätzlich ..."></textarea>
+          </div>
+          <div class="field" style="min-width:220px;">
+            <label>Schlaf (letzte Nacht)</label>
+            <div class="radio-row">
+              <label><input type="radio" name="schlaf" value="ausreichend"> ausreichend</label>
+              <label><input type="radio" name="schlaf" value="nicht_ausreichend"> nicht ausreichend</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Sonstige Beschwerden (ganzer Tag)</label>
+          <div class="checklist" id="beschwerden-checklist"><!-- JS --></div>
+        </div>
+
+        <div class="field">
+          <label for="entry-andere">Andere Beschwerden</label>
+          <input type="text" id="entry-andere" placeholder="Freitext">
+        </div>
+
+        <div class="error-msg" id="entry-error"></div>
+
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <button class="btn btn-primary" id="save-entry-btn">Eintrag speichern</button>
+          <button class="btn btn-ghost hidden" id="cancel-edit-btn">Bearbeitung abbrechen</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- TAB: Verlauf ---------- -->
+    <section id="panel-history" class="panel hidden">
+      <div class="card">
+        <h2>Verlauf</h2>
+        <p class="hint">Alle bisherigen Einträge. Zum Ansehen, Bearbeiten oder Drucken auswählen.</p>
+        <ul class="entry-list" id="entry-list"><!-- JS --></ul>
+      </div>
+
+      <div class="card hidden" id="detail-card">
+        <h2>Details – <span id="detail-date"></span></h2>
+        <div id="detail-chart"></div>
+        <div class="legend" id="detail-legend"></div>
+        <div id="detail-meta" style="margin-top:16px;"></div>
+        <div style="display:flex; gap:10px; margin-top:16px;" class="no-print">
+          <button class="btn btn-primary" id="print-entry-btn">Für Frau Schapitz drucken</button>
+          <button class="btn" id="edit-entry-btn">Bearbeiten</button>
+          <button class="btn btn-danger" id="delete-entry-btn">Löschen</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- TAB: Nutzerverwaltung ---------- -->
+    <section id="panel-users" class="panel hidden">
+      <div class="card">
+        <h2>Nutzerverwaltung</h2>
+        <p class="hint">Hier kannst du z. B. für behandelnde Ärzt:innen einen Lesezugang anlegen. Sie sehen nur das Schmerztagebuch (keine Änderungen möglich).</p>
+
+        <div style="display:flex; gap:24px; flex-wrap:wrap; align-items:flex-end;">
+          <div class="field">
+            <label for="new-user-username">Benutzername</label>
+            <input type="text" id="new-user-username" placeholder="z. B. schapitz">
+          </div>
+          <div class="field">
+            <label for="new-user-password">Passwort</label>
+            <input type="text" id="new-user-password" placeholder="sicheres Passwort">
+          </div>
+          <div class="field">
+            <label for="new-user-role">Rolle</label>
+            <select id="new-user-role">
+              <option value="doctor">Arzt / Ärztin (nur lesen)</option>
+              <option value="patient">Patient (voller Zugriff)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="create-user-btn" style="height:44px;">Zugang anlegen</button>
+        </div>
+        <div class="error-msg" id="user-error"></div>
+
+        <h2 style="margin-top:26px; font-size:1.05rem;">Bestehende Zugänge</h2>
+        <table class="user-table">
+          <thead><tr><th>Benutzername</th><th>Rolle</th><th>Angelegt am</th></tr></thead>
+          <tbody id="user-list-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ===================== PRINT-BEREICH (nur für Ausdruck sichtbar) ===================== -->
+  <div id="print-area">
+    <h1 style="font-family:'Source Serif 4', Georgia, serif;">Schmerzprotokoll</h1>
+    <p><strong>Name:</strong> Sebastian Beller &nbsp;&nbsp; <strong>Datum:</strong> <span id="print-date"></span></p>
+    <div id="print-chart"></div>
+    <div id="print-legend" style="margin-top:10px; font-size:13px;"></div>
+    <table style="width:100%; border-collapse:collapse; margin-top:18px; font-size:13px;">
+      <tr><td style="width:160px; font-weight:600; padding:4px 0;">Medikamente:</td><td id="print-medikamente"></td></tr>
+      <tr><td style="font-weight:600; padding:4px 0;">Schlaf:</td><td id="print-schlaf"></td></tr>
+      <tr><td style="font-weight:600; padding:4px 0; vertical-align:top;">Sonstige Beschwerden:</td><td id="print-beschwerden"></td></tr>
+      <tr><td style="font-weight:600; padding:4px 0;">Andere:</td><td id="print-andere"></td></tr>
+    </table>
+  </div>
+
+</div>
+
+<div id="toast-container"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
