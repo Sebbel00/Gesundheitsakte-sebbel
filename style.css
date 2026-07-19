@@ -413,6 +413,19 @@ table.pain-table select {
   text-align: center;
 }
 
+.sort-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.sort-bar select {
+  width: auto;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
 /* ---------- Chart ---------- */
 .legend {
   display: flex;
