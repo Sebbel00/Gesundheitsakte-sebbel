@@ -414,6 +414,101 @@ table.pain-table select {
   font-weight: 700;
 }
 
+/* ---------- Medikations-Zeitstrahl ---------- */
+.timeline {
+  position: relative;
+  padding-left: 26px;
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--line);
+}
+.timeline-item {
+  position: relative;
+  margin-bottom: 22px;
+  background: #FCFBF8;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -26px;
+  top: 18px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--teal);
+  border: 2px solid var(--paper-2);
+}
+.timeline-item h3 {
+  font-size: 1.02rem;
+  color: var(--teal-dark);
+  margin-bottom: 2px;
+}
+.timeline-item .zeitraum {
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  margin-bottom: 8px;
+}
+.timeline-item pre {
+  font-family: inherit;
+  white-space: pre-wrap;
+  background: var(--paper);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
+  margin: 6px 0;
+}
+.timeline-item .notiz {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin-top: 6px;
+}
+.timeline-item .item-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* ---------- Markdown-Rendering (Befunde) ---------- */
+.md-render {
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+.md-render h1, .md-render h2, .md-render h3 {
+  font-family: 'Source Serif 4', Georgia, serif;
+  color: var(--teal-dark);
+  margin-top: 1.1em;
+  margin-bottom: .35em;
+}
+.md-render h1 { font-size: 1.3rem; }
+.md-render h2 { font-size: 1.12rem; }
+.md-render h3 { font-size: 1.0rem; }
+.md-render p { margin: 0 0 .8em 0; }
+.md-render ul, .md-render ol { margin: 0 0 .8em 1.3em; padding: 0; }
+.md-render li { margin-bottom: .25em; }
+.md-render hr { border: none; border-top: 1px solid var(--line); margin: 1.1em 0; }
+.md-render strong { color: var(--ink); }
+.md-render table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.6em 0 1em;
+  font-size: 0.86rem;
+}
+.md-render th, .md-render td {
+  border: 1px solid var(--line);
+  padding: 5px 8px;
+  text-align: left;
+}
+.md-render th { background: var(--paper); font-weight: 600; }
+
 /* ---------- Nutzerverwaltung ---------- */
 .user-table {
   width: 100%;
