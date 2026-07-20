@@ -20,13 +20,13 @@ const db = getFirestore(app);
 const TIMEPOINTS = [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24];
 
 const REGIONS = [
-  { key: "kopf",   label: "Kopfschmerzen",  symbol: "✕", color: "#C1533C" },
+  { key: "kopf",   label: "Kopfschmerzen",  symbol: "X", color: "#C1533C" },
   { key: "nacken", label: "HWS / Nacken",   symbol: "○", color: "#3E7C82" },
   { key: "bws",    label: "BWS",            symbol: "△", color: "#8A6D3B" },
-  { key: "lws",    label: "LWS",            symbol: "◇", color: "#5B5F97" },
-  { key: "arme",   label: "Arme",           symbol: "▽", color: "#7A9E5D" },
-  { key: "beine",  label: "Beine",          symbol: "✳", color: "#A0522D" },
-  { key: "bauch",  label: "Bauch",          symbol: "□", color: "#B85C8A" },
+  { key: "lws",    label: "LWS",            symbol: "□", color: "#5B5F97" },
+  { key: "arme",   label: "Arme",           symbol: "◇", color: "#7A9E5D" },
+  { key: "beine",  label: "Beine",          symbol: "*", color: "#A0522D" },
+  { key: "bauch",  label: "Bauch",          symbol: "▽", color: "#B85C8A" },
 ];
 
 const BESCHWERDEN_LIST = [
@@ -397,7 +397,7 @@ async function loadHistory() {
 // ---------------------------------------------------------------------------
 function buildChartSVG(entry) {
   const width = 640, height = 340;
-  const padLeft = 34, padRight = 14, padTop = 14, padBottom = 30;
+  const padLeft = 34, padRight = 14, padTop = 30, padBottom = 14;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
 
@@ -406,17 +406,20 @@ function buildChartSVG(entry) {
 
   let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto; font-family:Inter,sans-serif;">`;
 
-  // Gridlines horizontal (0-10)
+  // Waagrechte Skalen-Hilfslinien (0–10): gerade Werte dicker, ungerade
+  // dünner gezeichnet – erleichtert das Ablesen, auf welcher Linie ein
+  // Messpunkt tatsächlich liegt.
   for (let v = 0; v <= 10; v++) {
     const y = yFor(v);
-    svg += `<line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="#D9D2C0" stroke-width="1"/>`;
-    svg += `<text x="${padLeft - 8}" y="${y + 3}" font-size="9" text-anchor="end" fill="#5C594F">${v}</text>`;
+    const isEven = v % 2 === 0;
+    svg += `<line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="${isEven ? "#C7BFA9" : "#EAE4D6"}" stroke-width="${isEven ? 1.4 : 0.7}"/>`;
+    svg += `<text x="${padLeft - 8}" y="${y + 3}" font-size="9" text-anchor="end" fill="#5C594F" font-weight="${isEven ? 700 : 400}">${v}</text>`;
   }
-  // Gridlines vertical (Zeitpunkte)
+  // Senkrechte Gitterlinien je Zeitpunkt + Uhrzeit-Beschriftung OBEN
   TIMEPOINTS.forEach((t, i) => {
     const x = xFor(i);
     svg += `<line x1="${x}" y1="${padTop}" x2="${x}" y2="${height - padBottom}" stroke="#EDE8DA" stroke-width="1"/>`;
-    svg += `<text x="${x}" y="${height - padBottom + 14}" font-size="9" text-anchor="middle" fill="#5C594F">${t}</text>`;
+    svg += `<text x="${x}" y="${padTop - 10}" font-size="9" text-anchor="middle" fill="#5C594F">${t}</text>`;
   });
 
   // Linien pro Region
